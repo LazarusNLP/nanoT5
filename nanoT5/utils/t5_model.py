@@ -502,7 +502,8 @@ class MyT5(nn.Module):
         elif isinstance(module, (MyT5)):
             module.shared.weight.data.normal_(mean=0.0, std=factor * 1.0)
             if hasattr(module, "lm_head") and not self.config.tie_word_embeddings:
-                module.lm_head.weight.data.normal_(mean=0.0, std=factor * 1.0)
+                # Implements https://github.com/PiotrNawrot/nanoT5/issues/25
+                module.lm_head.weight.data.normal_(mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
         elif isinstance(module, T5DenseGatedActDense):
             d_ff, d_model = module.wi_0.weight.data.size()
             module.wi_0.weight.data.normal_(mean=0.0, std=factor * ((d_model) ** -0.5))

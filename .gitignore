@@ -3,3 +3,5 @@ env.yaml
 logs
 scripts
 .neptune
+
+__pycache__/
