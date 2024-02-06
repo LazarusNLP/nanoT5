@@ -73,23 +73,28 @@ def get_tokenizer(args):
 def load_dataset_splits(args):
     if args.mode == 'pt':
         dataset = datasets.load_dataset(
-            'c4',
-            'en',
+            'uonlp/CulturaX',
+            'id',
             streaming=True,
         )
 
         dataset = dataset.remove_columns(
-            ['timestamp', 'url']
+            ['timestamp', 'url', 'source']
         )
+
+        # Random sample for test split
+        dataset = dataset.shuffle(buffer_size=10_000, seed=args.seed)
+        # Hardcode 1% of corpus for validation
+        test_ds = dataset['train'].skip(230_000)
 
         dataset_splits = {
             'train': dataset['train'],
-            'test': dataset['validation'],
+            'test': test_ds,
         }
 
-        assert (
-            dataset['train'].n_shards == 1024
-        ), "We want to have many shards for efficient processing with num_workes in PyTorch dataloader"
+        # assert (
+        #     dataset['train'].n_shards == 1024
+        # ), "We want to have many shards for efficient processing with num_workes in PyTorch dataloader"
     elif args.mode == 'ft':
         dataset_splits = datasets.load_dataset(
             args.data.exec_file_path,
@@ -199,7 +204,8 @@ def get_dataloaders(tokenizer, config, args):
             shuffle=shuffle,
             collate_fn=data_collator,
             batch_size=batch_size,
-            num_workers=args.data.num_workers,
+            # https://github.com/huggingface/datasets/issues/4678#issuecomment-1184426690
+            num_workers=args.data.num_workers if split == "train" else 0,
             pin_memory=True,
             drop_last=False,
         )
